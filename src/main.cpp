@@ -1,8 +1,5 @@
-#include <Adafruit_Sensor.h>
 #include <Arduino.h>
 #include <Arduino_JSON.h>
-#include <DHT.h>
-#include <DHT_U.h>
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -10,38 +7,21 @@
 #include <LittleFS.h>
 #include <time.h>
 
-#include "sensor_manager.h"
-#include "dht22_sensor.h"
+#include "webserver.h"
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
-#define DHTPIN 5  // Digital pin connected to the DHT sensor
-// Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 --
-// Pin 15 can work but DHT must be disconnected during program upload.
-
-// Uncomment the type of sensor in use:
-#define DHTTYPE DHT22  // DHT 22 (AM2302)
-
-SensorManager sensorManager;
-
-DHT_Unified dht(DHTPIN, DHTTYPE);
+WebServer webServer;
 
 // SSID and Password of your WiFi router
-const char *ssid = "COFFEE-POT";
-const char *password = "polarpop";
+const char *ssid = "********";
+const char *password = "********";
 AsyncWebServer server(80);           // Server on port 80
 AsyncEventSource events("/events");  // Create an Event Source on /events
-
-JSONVar readings;  // Json Variable to Hold Sensor Readings
 
 // Timer variables
 unsigned long lastTime = 0;
 unsigned long timerDelay = 30000;
-
-// void handleRoot() {
-//   String s = webpage;
-//   server.send(200, "text/html", s);
-// }
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
     Serial.printf("Listing directory: %s\n", dirname);
@@ -98,54 +78,13 @@ void initWiFi() {
     Serial.println(WiFi.localIP());
 }
 
-// Get Sensor Readings and return JSON object
-String getSensorReadings() {
-    // Delay between measurements.
-    // if (millis() - prevTime >= delayMS) {
-    //   prevTime = millis();
-    // } else {
-    //   String jsonString = JSON.stringify(readings);
-    //   return jsonString;
-    // }
-    // Get temperature event and print its value.
-    sensors_event_t event;
-    dht.temperature().getEvent(&event);
-    if (isnan(event.temperature)) {
-        String err = F("Error reading temperature!");
-        Serial.println(err);
-        readings["temperature"] = String("--");
-    } else {
-        Serial.print(F("Temperature: "));
-        Serial.print(event.temperature);
-        Serial.println(F("°C"));
-
-        readings["temperature"] = String(event.temperature);
-    }
-    // Get humidity event and print its value.
-    dht.humidity().getEvent(&event);
-    if (isnan(event.relative_humidity)) {
-        String err = F("Error reading humidity!");
-        Serial.println(err);
-        readings["humidity"] = String("--");
-    } else {
-        Serial.print(F("Humidity: "));
-        Serial.print(event.relative_humidity);
-        Serial.println(F("%"));
-
-        readings["humidity"] = String(event.relative_humidity);
-    }
-
-    String jsonString = JSON.stringify(readings);
-    return jsonString;
-}
-
 // Initialize LittleFS
 void initFS() {
     if (!LittleFS.begin()) {
         Serial.println("An error has occurred while mounting LittleFS");
     }
     Serial.println("LittleFS mounted successfully");
-    Serial.println("----list 1----");
+    Serial.println("---- list ----");
     listDir(LittleFS, "/", 1);
 
     File file = LittleFS.open("/index.html", "r");
@@ -161,43 +100,9 @@ void setup() {
 	initWiFi();
     initFS();
 
-	sensorManager.AddSensor(new DHT22Sensor(DHTPIN));
-
-    // Web Server Root URL
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(LittleFS, "/index.html", "text/html");
-    });
-
-    server.serveStatic("/", LittleFS, "/");
-
-    // Request for the latest sensor readings
-    server.on("/readings", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = getSensorReadings();
-        request->send(200, "application/json", json);
-        json = String();
-    });
-
-    events.onConnect([](AsyncEventSourceClient *client) {
-        if (client->lastId()) {
-            Serial.printf(
-                "Client reconnected! Last message ID that it got is: %u\n",
-                client->lastId());
-        }
-        // send event with message "hello!", id current millis
-        // and set reconnect delay to 1 second
-        client->send("hello!", NULL, millis(), 10000);
-    });
-    server.addHandler(&events);
-
-    // Start server
-    server.begin();
+    webServer.Start();
 }
 
 void loop() {
-    if ((millis() - lastTime) > 1000) {
-        // Send Events to the client with the Sensor Readings Every second
-        events.send("ping", NULL, millis());
-        events.send(getSensorReadings().c_str(), "new_readings", millis());
-        lastTime = millis();
-    }
+    webServer.Update();
 }

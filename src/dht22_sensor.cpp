@@ -10,13 +10,15 @@ DHT22Sensor::~DHT22Sensor() {
 
 bool DHT22Sensor::Init() {
     
-    this->dht = new DHT_Unified(data_pin, 22U);
+    this->dht = new DHT_Unified(data_pin, DHT22);
 
     dht->begin();
     dht->temperature().getSensor(&this->temperature_sensor);
     dht->humidity().getSensor(&this->humidity_sensor);
 
     this->delay = std::max(temperature_sensor.min_delay, humidity_sensor.min_delay) / 1000;
+
+    prev_time = millis();
 
     return true;
 }
@@ -39,6 +41,7 @@ bool DHT22Sensor::Update() {
         humidity = event.relative_humidity;
     }
 
+    prev_time = millis();
     return true;
 }
 
