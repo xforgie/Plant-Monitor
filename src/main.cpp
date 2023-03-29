@@ -1,27 +1,14 @@
 #include <Arduino.h>
-#include <Arduino_JSON.h>
-#include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
-#include <ESPAsyncWebServer.h>
+#include <WiFiManager.h>
 #include <FS.h>
 #include <LittleFS.h>
-#include <time.h>
 
 #include "webserver.h"
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
+WiFiManager wifiManager;
 WebServer webServer;
-
-// SSID and Password of your WiFi router
-const char *ssid = "********";
-const char *password = "********";
-AsyncWebServer server(80);           // Server on port 80
-AsyncEventSource events("/events");  // Create an Event Source on /events
-
-// Timer variables
-unsigned long lastTime = 0;
-unsigned long timerDelay = 30000;
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
     Serial.printf("Listing directory: %s\n", dirname);
@@ -69,13 +56,15 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
 // Initialize WiFi
 void initWiFi() {
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi ..");
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.print('.');
-        delay(1000);
+    if (wifiManager.autoConnect()) {
+        Serial.println("Connection established!");
+        Serial.print("SSID: ");
+        Serial.println(WiFi.SSID());
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("Configuration portal running...");
     }
-    Serial.println(WiFi.localIP());
 }
 
 // Initialize LittleFS

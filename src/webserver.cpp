@@ -32,6 +32,8 @@ void WebServer::Start() {
             Serial.printf(
                 "Client reconnected! Last message ID that it got is: %u\n",
                 client->lastId());
+        } else {
+            Serial.println("New client connection");
         }
         // send event with message "hello!", id current millis
         // and set reconnect delay to 10 seconds
@@ -39,6 +41,8 @@ void WebServer::Start() {
     });
 
     server->addHandler(events);
+
+    // server->end();
 
     // Start server
     server->begin();
