@@ -8,9 +8,13 @@
 #include "sensor_manager.h"
 #include "dht22_sensor.h"
 
-#define DHTPIN 5  // Digital pin connected to the DHT sensor
-// Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 --
-// Pin 15 can work but DHT must be disconnected during program upload.
+#define DHTPIN 2
+
+#define SCL_PIN 5
+#define SDA_PIN 4
+
+#define ECHO_PIN 13
+#define TRIGGER_PIN 12
 
 class WebServer {
     public:
