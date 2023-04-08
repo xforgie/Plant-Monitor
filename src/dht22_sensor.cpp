@@ -25,10 +25,12 @@ bool DHT22Sensor::Init() {
 
 bool DHT22Sensor::Update() {
     // Get temperature event and print its value.
+    bool is_error = false;
     sensors_event_t event;
     dht->temperature().getEvent(&event);
     if (isnan(event.temperature)) {
         // TODO: handle err
+        is_error = true;
     } else {
         temperature = event.temperature;
     }
@@ -37,9 +39,12 @@ bool DHT22Sensor::Update() {
     dht->humidity().getEvent(&event);
     if (isnan(event.relative_humidity)) {
         // TODO: handle err
+        is_error = true;
     } else {
         humidity = event.relative_humidity;
     }
+
+    digitalWrite(16, is_error);
 
     prev_time = millis();
     return true;

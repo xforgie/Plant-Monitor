@@ -4,11 +4,19 @@
 #include <LittleFS.h>
 
 #include "webserver.h"
+#include "water_pump_manager.h"
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
+#define WIFI_TIMEOUT 15
+
+#define RED_LED_PIN 0
+#define YELLOW_LED_PIN 16
+#define GREEN_LED_PIN 15
+
 WiFiManager wifiManager;
-WebServer webServer;
+WebServer server;
+// WaterPumpManager waterPump(WATER_PUMP_GPIO);
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
     Serial.printf("Listing directory: %s\n", dirname);
@@ -56,6 +64,7 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
 // Initialize WiFi
 void initWiFi() {
     WiFi.mode(WIFI_STA);
+    wifiManager.setTimeout(WIFI_TIMEOUT);
     if (wifiManager.autoConnect()) {
         Serial.println("Connection established!");
         Serial.print("SSID: ");
@@ -85,13 +94,24 @@ void initFS() {
 
 void setup() {
 	Serial.begin(115200);
+
+    pinMode(RED_LED_PIN, OUTPUT);
+    pinMode(YELLOW_LED_PIN, OUTPUT);
+    pinMode(GREEN_LED_PIN, OUTPUT);
+
+    digitalWrite(RED_LED_PIN, HIGH);
+    digitalWrite(YELLOW_LED_PIN, HIGH);
+    digitalWrite(GREEN_LED_PIN, LOW);
     
 	initWiFi();
     initFS();
 
-    webServer.Start();
+    server.Start();
+
+    digitalWrite(GREEN_LED_PIN, HIGH);
 }
 
 void loop() {
-    webServer.Update();
+    server.Update();
+    // waterPump.Update();
 }
