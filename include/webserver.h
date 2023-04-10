@@ -8,6 +8,7 @@
 #include "sensor_manager.h"
 #include "dht22_sensor.h"
 #include "gpio.h"
+#include "hc_sr04_sensor.h"
 
 class WebServer {
     public:
