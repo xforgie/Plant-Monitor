@@ -3,6 +3,7 @@
 #include <FS.h>
 #include <LittleFS.h>
 
+#include "status_reporter.h"
 #include "webserver.h"
 #include "water_pump_manager.h"
 
@@ -10,12 +11,10 @@
 
 #define WIFI_TIMEOUT 15
 
-#define RED_LED_PIN 0
-#define YELLOW_LED_PIN 16
-#define GREEN_LED_PIN 15
+std::shared_ptr<StatusReporter> reporter(new StatusReporter());
 
 WiFiManager wifiManager;
-WebServer server;
+WebServer server(reporter);
 // WaterPumpManager waterPump(WATER_PUMP_GPIO);
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
@@ -65,50 +64,49 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
 void initWiFi() {
     WiFi.mode(WIFI_STA);
     wifiManager.setTimeout(WIFI_TIMEOUT);
-    if (wifiManager.autoConnect()) {
+    reporter->PostEvent("WIFI", Status::STATUS_WARN, "Attempting to connect");
+    wifiManager.autoConnect();
+    
+    if (WiFi.localIP().isSet()) {
+        reporter->PostEvent("WIFI", Status::STATUS_OK, "Connected");
         Serial.println("Connection established!");
         Serial.print("SSID: ");
         Serial.println(WiFi.SSID());
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
     } else {
-        Serial.println("Configuration portal running...");
+        reporter->PostEvent("WIFI", Status::STATUS_ERROR, "WiFi not connected");
     }
 }
 
 // Initialize LittleFS
 void initFS() {
     if (!LittleFS.begin()) {
-        Serial.println("An error has occurred while mounting LittleFS");
+        reporter->PostEvent("LFS", Status::STATUS_ERROR, "An error has occurred while mounting LittleFS");
+        return;
     }
-    Serial.println("LittleFS mounted successfully");
+    reporter->PostEvent("LFS", Status::STATUS_OK, "LittleFS mounted successfully");
     Serial.println("---- list ----");
     listDir(LittleFS, "/", 1);
 
     File file = LittleFS.open("/index.html", "r");
     if (!file) {
-        Serial.println("Failed to open file for reading");
+        reporter->PostEvent("LFS", Status::STATUS_ERROR, "Failed to open file for reading");
     }
     file.close();
 }
 
 void setup() {
 	Serial.begin(115200);
-
-    pinMode(RED_LED_PIN, OUTPUT);
-    pinMode(YELLOW_LED_PIN, OUTPUT);
-    pinMode(GREEN_LED_PIN, OUTPUT);
-
-    digitalWrite(RED_LED_PIN, HIGH);
-    digitalWrite(YELLOW_LED_PIN, HIGH);
-    digitalWrite(GREEN_LED_PIN, LOW);
     
 	initWiFi();
     initFS();
 
     server.Start();
 
-    digitalWrite(GREEN_LED_PIN, HIGH);
+    reporter->PostEvent("SERVER", Status::STATUS_OK, "Web server connected");
+
+    reporter->PrintTableToSerial();
 }
 
 void loop() {

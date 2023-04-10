@@ -2,7 +2,10 @@
 
 #include "webserver.h"
 
-WebServer::WebServer() {
+WebServer::WebServer(std::shared_ptr<StatusReporter> reporter) {
+    this->reporter = reporter;
+    sensorManager = new SensorManager(reporter);
+
     server = new AsyncWebServer(80);
     events = new AsyncEventSource("/events");
 }
@@ -22,7 +25,7 @@ void WebServer::Start() {
 
     // Request for the latest sensor readings
     server->on("/readings", HTTP_GET, [&sensorManager = sensorManager](AsyncWebServerRequest *request) {
-        String json = JSON.stringify(sensorManager.GetReadings());
+        String json = JSON.stringify(sensorManager->GetReadings());
         request->send(200, "application/json", json);
         json = String();
     });
@@ -46,18 +49,21 @@ void WebServer::Start() {
 
     // Start server
     server->begin();
+
+    reporter->PostEvent("SERVER", Status::STATUS_OK, "Server started");
 }
 
 void WebServer::Update() {
-    sensorManager.UpdateSensors();
+    sensorManager->UpdateSensors();
 
     if (millis() - prev_event_time > event_delay) {
-        SendEvent(sensorManager.GetReadings(), "new_readings");
+        SendEvent(sensorManager->GetReadings(), "new_readings");
         prev_event_time = millis();
     }
 }
 
 WebServer::~WebServer() {
+    delete sensorManager;
     delete events;
     delete server;
 }
@@ -65,8 +71,8 @@ WebServer::~WebServer() {
 /* PRIVATE METHODS */
 
 void WebServer::InitSensors() {
-    sensorManager.AddSensor(new DHT22Sensor(DHTPIN));
-    sensorManager.AddSensor(new HC_SR04Sensor(TRIGGER_PIN, ECHO_PIN));
+    sensorManager->AddSensor(new DHT22Sensor(reporter, DHT22_PIN));
+    sensorManager->AddSensor(new HC_SR04Sensor(TRIGGER_PIN, ECHO_PIN));
 }
 
 void WebServer::SendEvent(JSONVar json, const char* event) {

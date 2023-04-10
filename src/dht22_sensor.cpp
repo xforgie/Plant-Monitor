@@ -1,6 +1,7 @@
 #include "dht22_sensor.h"
 
-DHT22Sensor::DHT22Sensor(const int pin) {
+DHT22Sensor::DHT22Sensor(std::shared_ptr<StatusReporter> reporter, const int pin) {
+    this->reporter = reporter;
     data_pin = pin;
 }
 
@@ -29,25 +30,25 @@ bool DHT22Sensor::Update() {
     sensors_event_t event;
     dht->temperature().getEvent(&event);
     if (isnan(event.temperature)) {
-        // TODO: handle err
         is_error = true;
+        reporter->PostEvent("DHT22_TEMP", Status::STATUS_ERROR, "Could not read temperature");
     } else {
         temperature = event.temperature;
+        reporter->PostEvent("DHT22_TEMP", Status::STATUS_OK, "Successful read");
     }
 
     // Get humidity event and print its value.
     dht->humidity().getEvent(&event);
     if (isnan(event.relative_humidity)) {
-        // TODO: handle err
         is_error = true;
+        reporter->PostEvent("DHT22_HUM", Status::STATUS_ERROR, "Could not read humidity");
     } else {
         humidity = event.relative_humidity;
+        reporter->PostEvent("DHT22_HUM", Status::STATUS_OK, "Successful read");
     }
 
-    digitalWrite(16, is_error);
-
     prev_time = millis();
-    return true;
+    return is_error;
 }
 
 inline bool DHT22Sensor::IsReady() const {
@@ -59,11 +60,11 @@ void DHT22Sensor::GetReadings(JSONVar* readings) const {
     (*readings)["humidity"] = String(humidity);
 }
 
-String DHT22Sensor::GetName() {
-    return String("DHT22");
+std::string DHT22Sensor::GetName() {
+    return "DHT22";
 }
 
-inline String DHT22Sensor::ToString() const {
+inline std::string DHT22Sensor::ToString() const {
     char buffer[1024];
     snprintf(buffer, 1024, R"-----(
         ------------------------------
@@ -97,5 +98,5 @@ inline String DHT22Sensor::ToString() const {
                     humidity_sensor.min_value,
                     humidity_sensor.resolution);
     
-    return String(buffer);
+    return buffer;
 }

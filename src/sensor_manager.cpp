@@ -1,7 +1,8 @@
 
 #include "sensor_manager.h"
 
-SensorManager::SensorManager() {
+SensorManager::SensorManager(std::shared_ptr<StatusReporter> reporter) {
+    this->reporter = reporter;
     num_sensors = 0;
 }
 
