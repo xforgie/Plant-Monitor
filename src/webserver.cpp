@@ -66,6 +66,7 @@ WebServer::~WebServer() {
 
 void WebServer::InitSensors() {
     sensorManager.AddSensor(new DHT22Sensor(DHTPIN));
+    sensorManager.AddSensor(new HC_SR04Sensor(TRIGGER_PIN, ECHO_PIN));
 }
 
 void WebServer::SendEvent(JSONVar json, const char* event) {
