@@ -7,18 +7,11 @@
 
 #include "sensor_manager.h"
 #include "dht22_sensor.h"
-
-#define DHTPIN 2
-
-#define SCL_PIN 5
-#define SDA_PIN 4
-
-#define ECHO_PIN 13
-#define TRIGGER_PIN 12
+#include "gpio.h"
 
 class WebServer {
     public:
-    WebServer();
+    WebServer(std::shared_ptr<StatusReporter> reporter);
     ~WebServer();
 
     void Start();
@@ -28,7 +21,9 @@ class WebServer {
     void InitSensors();
     void SendEvent(JSONVar json, const char* event);
 
-    SensorManager sensorManager;
+    std::shared_ptr<StatusReporter> reporter;
+
+    SensorManager* sensorManager;
     AsyncWebServer* server;
     AsyncEventSource* events;
 
